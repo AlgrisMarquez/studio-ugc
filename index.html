@@ -118,22 +118,30 @@ input::placeholder{color:var(--muted)}
 .brief-rendered ul li::before{content:'•';position:absolute;left:4px;color:var(--purple);font-weight:700}
 .brief-rendered .piece-block{
   background:var(--cream);border-radius:10px;
-  padding:12px 14px;margin-bottom:8px;
+  padding:14px 16px;margin-bottom:10px;
   border:0.5px solid var(--border);
+  border-left:3px solid var(--purple-mid);
 }
+.brief-rendered .piece-block ul{list-style:none;margin:0;padding:0}
+.brief-rendered .piece-block ul li{font-size:13px;padding:4px 0 4px 16px;position:relative;border-bottom:0.5px solid var(--border-soft);line-height:1.6}
+.brief-rendered .piece-block ul li:last-child{border-bottom:none}
+.brief-rendered .piece-block ul li::before{content:'→';position:absolute;left:0;color:var(--purple-mid);font-size:11px;top:6px}
 .brief-rendered .piece-label{
-  font-family:var(--font-serif);font-size:13px;font-weight:700;
-  color:var(--purple);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;
+  font-family:var(--font-serif);font-size:14px;font-weight:700;
+  color:var(--purple-dark);margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
 }
+.brief-rendered .piece-label::before{content:'📋';font-size:12px}
 .brief-rendered .hook-item{
   background:var(--white);border:0.5px solid var(--border);
   border-radius:8px;padding:9px 13px;margin-bottom:6px;
   font-size:13.5px;position:relative;padding-left:32px;
 }
 .brief-rendered .arte-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
-.brief-rendered .arte-card{background:var(--cream);border:0.5px solid var(--border);border-radius:10px;padding:12px 14px}
-.brief-rendered .arte-card-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--purple);margin-bottom:6px;display:flex;align-items:center;gap:5px}
-.brief-rendered .arte-card-body{font-size:13px;color:var(--text);line-height:1.6}
+.brief-rendered .arte-card{background:var(--cream);border:0.5px solid var(--border);border-radius:10px;padding:13px 15px;transition:box-shadow 0.15s}
+.brief-rendered .arte-card:hover{box-shadow:0 2px 12px rgba(107,45,139,0.1)}
+.brief-rendered .arte-card-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--purple);margin-bottom:7px;display:flex;align-items:center;gap:5px;padding-bottom:6px;border-bottom:0.5px solid var(--border)}
+.brief-rendered .arte-card-body{font-size:13px;color:var(--text);line-height:1.7}
 @media(max-width:520px){.brief-rendered .arte-grid{grid-template-columns:1fr}}
 .brief-rendered .hook-num{
   position:absolute;left:10px;top:50%;transform:translateY(-50%);
@@ -255,7 +263,7 @@ input::placeholder{color:var(--muted)}
 
     <!-- PASO 3 -->
     <div class="card">
-      <div class="card-header"><div class="step-num">3</div><span class="card-title">Objetivo y plataforma</span></div>
+      <div class="card-header"><div class="step-num">3</div><span class="card-title" id="paso3Title">Objetivo y plataforma</span></div>
       <div class="card-body">
         <div class="param-grid">
           <div>
@@ -265,13 +273,21 @@ input::placeholder{color:var(--muted)}
               <button class="pill" data-val="publicidad paga (conversión y ventas)">🎯 Publicidad</button>
             </div>
           </div>
-          <div>
-            <span class="param-label">Plataforma</span>
+          <div id="platWrap">
+            <span class="param-label" id="platLabel">Plataforma</span>
+            <!-- Plataformas (video/story) -->
             <div class="pills" id="platPills">
               <button class="pill active" data-val="Instagram">Instagram</button>
               <button class="pill" data-val="TikTok">TikTok</button>
               <button class="pill" data-val="Facebook">Facebook</button>
               <button class="pill" data-val="YouTube Shorts">YT Shorts</button>
+            </div>
+            <!-- Formatos (foto/carrusel) -->
+            <div class="pills" id="formatoPills" style="display:none">
+              <button class="pill active" data-val="9:16 vertical">📱 9:16</button>
+              <button class="pill" data-val="1:1 cuadrado">⬜ Cuadrado</button>
+              <button class="pill" data-val="4:5 retrato">🖼 4:5</button>
+              <button class="pill" data-val="16:9 banner horizontal">🖥 Banner</button>
             </div>
           </div>
         </div>
@@ -374,6 +390,7 @@ function parseSection(title, body) {
   if (isBriefPerPiece) {
     // Agrupar por pieza
     let current = null;
+    let currentBody = null;
     lines.forEach(line => {
       const pieceMatch = line.match(/^—?\s*[Pp]ieza\s*(\d+)/);
       if (pieceMatch) {
@@ -383,11 +400,15 @@ function parseSection(title, body) {
         lbl.className = 'piece-label';
         lbl.textContent = line.replace(/^—\s*/, '');
         current.appendChild(lbl);
+        currentBody = document.createElement('ul');
+        current.appendChild(currentBody);
         el.appendChild(current);
-      } else if (current) {
-        const p = document.createElement('p');
-        p.innerHTML = formatInline(line.replace(/^[·\-]\s*/,''));
-        current.appendChild(p);
+      } else if (currentBody) {
+        const clean = line.replace(/^[·\-]\s*/,'').trim();
+        if (!clean) return;
+        const li = document.createElement('li');
+        li.innerHTML = formatInline(clean);
+        currentBody.appendChild(li);
       } else {
         const p = document.createElement('p');
         p.innerHTML = formatInline(line);
@@ -527,6 +548,13 @@ function switchTipo(type) {
   ['subVideo','subFoto','subCarrusel','subStory'].forEach(id => document.getElementById(id).classList.remove('visible'));
   const map = {video:'subVideo',foto:'subFoto',carrusel:'subCarrusel',story:'subStory'};
   document.getElementById(map[type]).classList.add('visible');
+
+  const isVisual = type === 'foto' || type === 'carrusel';
+  document.getElementById('platPills').style.display = isVisual ? 'none' : 'flex';
+  document.getElementById('formatoPills').style.display = isVisual ? 'flex' : 'none';
+  document.getElementById('platLabel').textContent = isVisual ? 'Formato de imagen' : 'Plataforma';
+  document.getElementById('paso3Title').textContent = isVisual ? 'Objetivo y formato' : 'Objetivo y plataforma';
+
   updateEstiloMode();
 }
 document.querySelectorAll('#tipoPills .pill').forEach(b => b.addEventListener('click', () => {
@@ -544,6 +572,12 @@ const getFotoCant = makeSingle('fotoCantPills');
 const getSlides = makeSingle('slidePills');
 const getFin = makeSingle('finPills');
 const getPlat = makeSingle('platPills');
+const getFormato = makeSingle('formatoPills');
+
+function getPlatOrFormato() {
+  if (currentType === 'foto' || currentType === 'carrusel') return getFormato();
+  return getPlat();
+}
 
 function updateEstiloMode() {
   const isVideo = currentType === 'video';
@@ -620,6 +654,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   document.querySelector('#slidePills .pill').classList.add('active');
   document.querySelector('#finPills .pill').classList.add('active');
   document.querySelector('#platPills .pill').classList.add('active');
+  document.querySelector('#formatoPills .pill').classList.add('active');
   switchTipo('video');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
@@ -642,7 +677,7 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
   ss.classList.remove('visible'); br.style.display = 'none'; br.innerHTML = ''; briefRaw = '';
   setTimeout(() => rc.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 
-  const tipo = getTipo(), subParam = getSubParam(), fin = getFin(), plat = getPlat(), estilos = getEstilos();
+  const tipo = getTipo(), subParam = getSubParam(), fin = getFin(), plat = getPlatOrFormato(), estilos = getEstilos();
   const cliente = document.getElementById('cliente').value.trim();
   const producto = document.getElementById('producto').value.trim();
   const publico = document.getElementById('publico').value.trim();
@@ -650,15 +685,16 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
   const estiloStr = estilos.length > 1 ? estilos.map((e,i) => `Pieza ${i+1}: ${e}`).join(' / ') : estilos[0];
   const piezas = Array.from({length:cantidad},(_,i) => `— Pieza ${i+1} [Estilo: ${estilos[i]||estilos[estilos.length-1]}]:`).join('\n');
 
-  const prompt = `Eres Algris Márquez, consultora experta en contenido UGC. Analizá la imagen del producto y creá un brief creativo completo, específico y listo para ejecutar.
+  const isVisual = currentType === 'foto' || currentType === 'carrusel';
 
-INSTRUCCIONES DE FORMATO IMPORTANTES:
-- Usá SOLO el símbolo ✦ para marcar cada sección principal (sin asteriscos, sin #, sin **)
-- No uses markdown: sin asteriscos para negritas, sin guiones bajos, sin #
-- Para bullets usá guión simple: -
-- Para piezas usá: — Pieza N [Estilo]:
-- Para hooks usá: 1. 2. 3. etc
-- Escribí en texto limpio y natural
+  const promptVideo = `Eres Algris Márquez, consultora experta en contenido UGC. Analizá la imagen del producto y creá un brief creativo para VIDEO, específico y listo para ejecutar.
+
+INSTRUCCIONES DE FORMATO:
+- Usá SOLO ✦ para cada sección. Sin asteriscos, sin #, sin markdown.
+- Bullets con guión simple: -
+- Piezas con: — Pieza N [Estilo]:
+- Hooks con numeración: 1. 2. 3.
+- Texto limpio y natural.
 
 DATOS DEL PROYECTO:
 ${cliente ? `- Cliente / Marca: ${cliente}` : ''}
@@ -670,23 +706,21 @@ ${producto ? `- Producto: ${producto}` : ''}
 ${publico ? `- Público: ${publico}` : ''}
 ${extras ? `- Notas: ${extras}` : ''}
 
-Estructura del brief:
-
 ✦ ANÁLISIS DEL PRODUCTO
-[Categoría, propuesta visual, oportunidades creativas]
+[Qué ves: categoría, propuesta visual, oportunidades para video]
 
 ✦ CONCEPTO CREATIVO
-[Una frase que define el eje narrativo]
+[Una frase que define el eje narrativo de todas las piezas]
 
 ✦ BRIEF POR PIEZA
 ${piezas}
-[Apertura, acción principal, encuadre, elementos visuales, cierre]
+[Para cada pieza: apertura (hook visual), acción principal, encuadre y movimiento de cámara, elementos en escena, cierre o CTA]
 
 ✦ GANCHOS Y HOOKS
-[5 opciones de apertura para ${plat} — objetivo: ${fin}]
+[5 frases de apertura para los primeros 2 segundos — adaptadas a ${plat} y objetivo ${fin}]
 
 ✦ COPY Y TEXTO EN PANTALLA
-[Textos, overlays y subtítulos por pieza]
+[Overlays, subtítulos y texto por pieza]
 
 ✦ DIRECCIÓN DE ARTE
 - Paleta de colores y fondos
@@ -695,13 +729,54 @@ ${piezas}
 - Outfit del creador
 
 ✦ AUDIO
-[Música, sonido o tendencia de audio en ${plat}]
+[Tipo de música o sonido para ${plat}]
 
 ✦ BRIEF PARA EL CREADOR
-[5 instrucciones claras para ejecutar]
+[5 instrucciones concretas para ejecutar el video]
 
 ✦ TIPS DE ALGRIS
-[2 consejos estratégicos para objetivo: ${fin}]`;
+[2 consejos estratégicos para ${fin} en ${plat}]`;
+
+  const promptFoto = `Eres Algris Márquez, consultora experta en contenido UGC. Analizá la imagen del producto y creá un brief creativo para FOTOGRAFÍA de producto estático — sin movimiento, enfocado en composición visual, iluminación y optimización de la imagen.
+
+INSTRUCCIONES DE FORMATO:
+- Usá SOLO ✦ para cada sección. Sin asteriscos, sin #, sin markdown.
+- Bullets con guión simple: -
+- Piezas con: — Pieza N:
+- Texto limpio y natural.
+
+DATOS DEL PROYECTO:
+${cliente ? `- Cliente / Marca: ${cliente}` : ''}
+- Formato: ${tipo} — ${cantidad} pieza${cantidad>1?'s':''} — Formato: ${subParam}
+- Objetivo: ${fin}
+- Estilo(s): ${estiloStr}
+${producto ? `- Producto: ${producto}` : ''}
+${publico ? `- Público: ${publico}` : ''}
+${extras ? `- Notas: ${extras}` : ''}
+
+✦ ANÁLISIS DEL PRODUCTO
+[Qué ves: forma, textura, colores, puntos visuales fuertes, ángulo más atractivo del producto]
+
+✦ BRIEF POR PIEZA
+${piezas}
+[Para cada toma: ángulo y perspectiva, composición (regla de tercios, simetría, etc.), distancia focal sugerida, elementos en escena, fondo]
+
+✦ DIRECCIÓN DE ARTE
+- Paleta de colores y fondos recomendados
+- Props y superficies (madera, mármol, tela, etc.)
+- Iluminación: tipo (natural/artificial), dirección, difusores o rebotadores
+- Temperatura de color y ambiente visual
+
+✦ COPY Y TEXTO EN PANTALLA
+[Texto sugerido para overlay o caption de cada pieza — sin mostrar precio si aplica]
+
+✦ BRIEF PARA EL FOTÓGRAFO O CREADOR
+[5 instrucciones concretas para la sesión: equipo, encuadre, luz, props, postproducción mínima]
+
+✦ TIPS DE ALGRIS
+[2 consejos para que estas fotos conviertan mejor para objetivo ${fin}]`;
+
+  const prompt = isVisual ? promptFoto : promptVideo;
 
   const mensajes = [
     'Analizando la imagen del producto…',
