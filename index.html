@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UGC Studio · Algris Márquez</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --purple:#6B2D8B;--purple-light:#F3EAF7;--purple-mid:#9B59B6;--purple-dark:#4A1A62;
+  --navy:#1B2A4A;--gold:#C9943A;--gold-light:#FBF5EA;--cream:#F7F5F0;
+  --white:#FFFFFF;--text:#1A1A2E;--muted:#6B6B80;
+  --border:rgba(107,45,139,0.15);--border-soft:rgba(107,45,139,0.08);
+  --radius:16px;--font-serif:'Cormorant Garamond',serif;--font-sans:'Outfit',sans-serif;
+}
+body{font-family:var(--font-sans);color:var(--text);background:var(--cream);min-height:100vh}
+.app{max-width:720px;margin:0 auto;padding:0 1rem 4rem}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,var(--purple-dark) 0%,var(--purple) 60%,var(--purple-mid) 100%);padding:2.25rem 2rem 2rem;border-radius:0 0 24px 24px;margin-bottom:2rem;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;background:rgba(201,148,58,0.15)}
+.header::after{content:'';position:absolute;bottom:-40px;left:35%;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,0.05)}
+.brand-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);border:0.5px solid rgba(255,255,255,0.25);border-radius:100px;padding:4px 14px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.85);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px}
+.gem{width:6px;height:6px;background:var(--gold);border-radius:50%}
+.header h1{font-family:var(--font-serif);font-size:36px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:8px;position:relative;z-index:1}
+.header h1 em{color:rgba(201,148,58,0.95);font-style:normal}
+.header p{font-size:13.5px;color:rgba(255,255,255,0.68);font-weight:300;position:relative;z-index:1}
+
+/* CARDS */
+.steps{display:flex;flex-direction:column;gap:1rem}
+.card{background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow 0.2s}
+.card:hover{box-shadow:0 4px 24px rgba(107,45,139,0.08)}
+.card-header{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:0.5px solid var(--border-soft);background:var(--cream)}
+.step-num{width:23px;height:23px;background:var(--purple);color:#fff;border-radius:50%;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-title{font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--purple-dark)}
+.card-body{padding:20px}
+
+/* UPLOAD */
+.upload-zone{border:1.5px dashed rgba(107,45,139,0.25);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--purple-light);position:relative}
+.upload-zone:hover{border-color:var(--purple);background:#EDE0F4}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:28px;margin-bottom:10px}
+.upload-text{font-size:13px;color:var(--muted);line-height:1.5}
+.upload-text strong{color:var(--purple)}
+.preview-img{width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:0.5px solid var(--border)}
+.change-img{display:inline-block;margin-top:10px;font-size:12px;color:var(--purple);cursor:pointer;text-decoration:underline}
+
+/* PARAMS */
+.param-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.full{grid-column:1/-1}
+.param-label{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.8px}
+.pills{display:flex;flex-wrap:wrap;gap:7px}
+.pill{padding:7px 15px;border-radius:100px;border:0.5px solid var(--border);background:var(--white);font-size:12.5px;cursor:pointer;transition:all 0.15s;font-family:var(--font-sans);color:var(--text)}
+.pill:hover{border-color:var(--purple);color:var(--purple)}
+.pill.active,.pill.multi-active{background:var(--purple);color:#fff;border-color:var(--purple)}
+.counter-row{display:flex;align-items:center;gap:12px;margin-top:2px}
+.counter-btn{width:30px;height:30px;border-radius:50%;border:0.5px solid var(--border);background:var(--cream);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;color:var(--purple)}
+.counter-btn:hover{background:var(--purple);color:#fff;border-color:var(--purple)}
+.counter-val{font-family:var(--font-serif);font-size:26px;font-weight:700;color:var(--purple-dark);min-width:30px;text-align:center}
+input[type="text"]{width:100%;padding:10px 14px;border:0.5px solid var(--border);border-radius:9px;font-family:var(--font-sans);font-size:13.5px;background:var(--cream);color:var(--text);outline:none;transition:border-color 0.15s}
+input[type="text"]:focus{border-color:var(--purple);background:#fff}
+input::placeholder{color:var(--muted)}
+.subparam{margin-top:14px;padding-top:14px;border-top:0.5px dashed var(--border);display:none}
+.subparam.visible{display:block}
+.story-info{background:var(--purple-light);border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--purple-dark)}
+.multi-note{background:var(--purple-light);border:0.5px solid var(--border);border-radius:8px;padding:9px 13px;font-size:12px;color:var(--purple-dark);margin-bottom:10px;display:none}
+.multi-note.visible{display:block}
+.hint{font-size:11.5px;color:var(--muted);margin-top:6px;font-style:italic}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:10px;margin-top:1.5rem}
+.gen-btn{flex:1;padding:16px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-family:var(--font-serif);font-size:18px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px;position:relative;overflow:hidden}
+.gen-btn::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:rgba(255,255,255,0.2)}
+.gen-btn:hover{background:var(--purple-dark);transform:translateY(-1px);box-shadow:0 8px 24px rgba(107,45,139,0.3)}
+.gen-btn:active{transform:translateY(0)}
+.gen-btn:disabled{opacity:0.55;cursor:not-allowed;transform:none;box-shadow:none}
+.reset-btn{padding:16px 20px;background:var(--cream);color:var(--muted);border:0.5px solid var(--border);border-radius:12px;font-family:var(--font-sans);font-size:14px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.reset-btn:hover{border-color:var(--purple);color:var(--purple);background:var(--purple-light)}
+
+/* RESULT */
+.result-card{background:var(--white);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;display:none;margin-top:1.25rem}
+.result-card.visible{display:block;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.result-top{padding:14px 20px;border-bottom:0.5px solid var(--border-soft);background:var(--gold-light);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.result-label{font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:8px}
+.gem-gold{width:7px;height:7px;background:var(--gold);border-radius:50%}
+.result-actions{display:flex;gap:8px}
+.action-btn{font-size:11.5px;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:var(--font-sans);font-weight:500;transition:all 0.15s;border:none}
+.copy-btn{border:0.5px solid rgba(201,148,58,0.4) !important;background:rgba(201,148,58,0.1);color:var(--gold)}
+.copy-btn:hover{background:var(--gold);color:#fff}
+.pdf-btn{border:0.5px solid rgba(107,45,139,0.3) !important;background:rgba(107,45,139,0.08);color:var(--purple)}
+.pdf-btn:hover{background:var(--purple);color:#fff}
+.result-body{padding:22px 20px}
+
+/* ── BRIEF RENDERED ── */
+.brief-rendered{font-size:14px;line-height:1.85;color:var(--text)}
+.brief-rendered .section{margin-bottom:1.5rem}
+.brief-rendered .section:last-child{margin-bottom:0}
+.brief-rendered .section-title{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--font-serif);font-size:16px;font-weight:700;
+  color:var(--purple-dark);margin-bottom:10px;padding:8px 12px;
+  background:var(--purple-light);border-radius:8px;
+  border-left:3px solid var(--purple);
+}
+.brief-rendered .section-title .icon{font-size:14px}
+.brief-rendered p{margin-bottom:6px;color:var(--text)}
+.brief-rendered strong{font-weight:600;color:var(--purple-dark)}
+.brief-rendered ul{list-style:none;margin:4px 0;padding:0}
+.brief-rendered ul li{
+  padding:5px 0 5px 20px;position:relative;
+  border-bottom:0.5px solid var(--border-soft);font-size:13.5px;
+}
+.brief-rendered ul li:last-child{border-bottom:none}
+.brief-rendered ul li::before{content:'•';position:absolute;left:4px;color:var(--purple);font-weight:700}
+.brief-rendered .piece-block{
+  background:var(--cream);border-radius:10px;
+  padding:12px 14px;margin-bottom:8px;
+  border:0.5px solid var(--border);
+}
+.brief-rendered .piece-label{
+  font-family:var(--font-serif);font-size:13px;font-weight:700;
+  color:var(--purple);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;
+}
+.brief-rendered .hook-item{
+  background:var(--white);border:0.5px solid var(--border);
+  border-radius:8px;padding:9px 13px;margin-bottom:6px;
+  font-size:13.5px;position:relative;padding-left:32px;
+}
+.brief-rendered .hook-num{
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;background:var(--purple);color:#fff;
+  border-radius:50%;font-size:9px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* STREAMING CURSOR */
+.cursor{display:inline-block;width:2px;height:14px;background:var(--purple);margin-left:2px;animation:blink 0.8s infinite;vertical-align:middle}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* LOADING */
+.loading-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:2.5rem}
+.loading-dots{display:flex;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--purple);animation:bounce 1s infinite}
+.dot:nth-child(2){animation-delay:.15s}
+.dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.3}50%{transform:translateY(-9px);opacity:1}}
+.loading-text{font-size:13px;color:var(--muted);font-style:italic}
+.streaming-status{font-size:12px;color:var(--purple);text-align:center;padding:8px;display:none}
+.streaming-status.visible{display:block}
+
+/* ERROR */
+.error-msg{background:#FFF0F0;border:0.5px solid #E24B4A;color:#A32D2D;border-radius:8px;padding:11px 15px;font-size:13px;margin-top:12px;display:none}
+.error-msg.visible{display:block}
+
+/* FOOTER */
+.footer{text-align:center;padding:2.5rem 1rem 0;font-size:11.5px;color:var(--muted);letter-spacing:0.5px;line-height:1.8}
+.footer strong{color:var(--purple);font-weight:500}
+
+@media(max-width:520px){.header h1{font-size:28px}.param-grid{grid-template-columns:1fr}.full{grid-column:1}.btn-row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="brand-tag"><div class="gem"></div>Algris Márquez · UGC Consulting</div>
+    <h1>Tu <em>Estudio</em><br>Creativo UGC</h1>
+    <p>Subí el producto, configurá tu contenido y recibí un brief listo para producir.</p>
+  </div>
+
+  <div class="steps">
+
+    <!-- PASO 1 -->
+    <div class="card">
+      <div class="card-header"><div class="step-num">1</div><span class="card-title">Imagen del producto</span></div>
+      <div class="card-body">
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept="image/*">
+          <div id="uploadPrompt">
+            <div class="upload-icon">📸</div>
+            <div class="upload-text">Arrastrá o <strong>hacé clic</strong> para subir la imagen<br><span style="font-size:11px;opacity:0.7">JPG, PNG o WEBP</span></div>
+          </div>
+          <img id="previewImg" class="preview-img" style="display:none">
+        </div>
+        <div id="changeWrap" style="text-align:center;display:none"><span class="change-img" id="changeImg">Cambiar imagen</span></div>
+      </div>
+    </div>
+
+    <!-- PASO 2 -->
+    <div class="card">
+      <div class="card-header"><div class="step-num">2</div><span class="card-title">Tipo de contenido</span></div>
+      <div class="card-body">
+        <div class="param-grid">
+          <div class="full">
+            <span class="param-label">Formato</span>
+            <div class="pills" id="tipoPills">
+              <button class="pill active" data-val="Reel / Video corto" data-type="video">⚡ Reel</button>
+              <button class="pill" data-val="Fotos estáticas" data-type="foto">📷 Fotos</button>
+              <button class="pill" data-val="Carrusel" data-type="carrusel">🎠 Carrusel</button>
+              <button class="pill" data-val="Story" data-type="story">📱 Story</button>
+            </div>
+          </div>
+          <div class="full subparam visible" id="subVideo">
+            <span class="param-label">Duración por pieza</span>
+            <div class="pills" id="durPills">
+              <button class="pill active" data-val="15 segundos">15s</button>
+              <button class="pill" data-val="30 segundos">30s</button>
+              <button class="pill" data-val="60 segundos">60s</button>
+            </div>
+          </div>
+          <div class="full subparam" id="subFoto">
+            <span class="param-label">Cantidad de fotos por entrega</span>
+            <div class="pills" id="fotoCantPills">
+              <button class="pill active" data-val="3 fotos">3 fotos</button>
+              <button class="pill" data-val="5 fotos">5 fotos</button>
+              <button class="pill" data-val="8 fotos">8 fotos</button>
+              <button class="pill" data-val="10 fotos">10 fotos</button>
+            </div>
+          </div>
+          <div class="full subparam" id="subCarrusel">
+            <span class="param-label">Cantidad de diapositivas</span>
+            <div class="pills" id="slidePills">
+              <button class="pill active" data-val="5 diapositivas">5 slides</button>
+              <button class="pill" data-val="7 diapositivas">7 slides</button>
+              <button class="pill" data-val="10 diapositivas">10 slides</button>
+            </div>
+          </div>
+          <div class="full subparam" id="subStory">
+            <div class="story-info">📱 <strong>Story estandarizado:</strong> máximo 15 segundos por story · Formato vertical 9:16</div>
+          </div>
+          <div>
+            <span class="param-label">Cantidad de piezas</span>
+            <div class="counter-row">
+              <button class="counter-btn" id="minusBtn">−</button>
+              <span class="counter-val" id="cantVal">1</span>
+              <button class="counter-btn" id="plusBtn">+</button>
+            </div>
+          </div>
+          <div>
+            <span class="param-label">Brief para (cliente / marca)</span>
+            <input type="text" id="cliente" placeholder="ej: Marca Glow, Laura Torres…">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 3 -->
+    <div class="card">
+      <div class="card-header"><div class="step-num">3</div><span class="card-title">Objetivo y plataforma</span></div>
+      <div class="card-body">
+        <div class="param-grid">
+          <div>
+            <span class="param-label">Objetivo</span>
+            <div class="pills" id="finPills">
+              <button class="pill active" data-val="orgánico (engagement y comunidad)">🌱 Orgánico</button>
+              <button class="pill" data-val="publicidad paga (conversión y ventas)">🎯 Publicidad</button>
+            </div>
+          </div>
+          <div>
+            <span class="param-label">Plataforma</span>
+            <div class="pills" id="platPills">
+              <button class="pill active" data-val="Instagram">Instagram</button>
+              <button class="pill" data-val="TikTok">TikTok</button>
+              <button class="pill" data-val="Facebook">Facebook</button>
+              <button class="pill" data-val="YouTube Shorts">YT Shorts</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 4 -->
+    <div class="card">
+      <div class="card-header"><div class="step-num">4</div><span class="card-title">Estilo y contexto</span></div>
+      <div class="card-body">
+        <div class="param-grid">
+          <div class="full">
+            <span class="param-label">Estilo UGC</span>
+            <div class="multi-note" id="multiStyleNote">✨ Seleccioná un estilo por pieza — podés combinar varios</div>
+            <div class="pills" id="estiloPills" style="margin-top:4px">
+              <button class="pill active" data-val="UGC auténtico (casual, sin filtros, primera persona)">🙌 Auténtico</button>
+              <button class="pill" data-val="Lifestyle (aspiracional, cotidiano pero cuidado)">✨ Lifestyle</button>
+              <button class="pill" data-val="Editorial (estético, curado, muy visual)">🎨 Editorial</button>
+              <button class="pill" data-val="Testimonial (review honesta a cámara)">🎤 Testimonial</button>
+              <button class="pill" data-val="Tutorial / Educativo">📚 Tutorial</button>
+              <button class="pill" data-val="Unboxing / Reveal">📦 Unboxing</button>
+            </div>
+            <div class="hint" id="estiloHint">Seleccioná un estilo</div>
+          </div>
+          <div class="full">
+            <span class="param-label">Descripción del producto</span>
+            <input type="text" id="producto" placeholder="ej: sérum vitamina C con retinol, 30ml">
+          </div>
+          <div class="full">
+            <span class="param-label">Público objetivo (opcional)</span>
+            <input type="text" id="publico" placeholder="ej: mujeres 25-40, emprendedoras, mamás millennials">
+          </div>
+          <div class="full">
+            <span class="param-label">Qué evitar o incluir (opcional)</span>
+            <input type="text" id="extras" placeholder="ej: evitar mostrar precio, incluir antes/después">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="gen-btn" id="generateBtn">✦ Generar brief creativo</button>
+          <button class="reset-btn" id="resetBtn">↺ Nueva consulta</button>
+        </div>
+        <div class="error-msg" id="errorMsg"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="result-card" id="resultCard">
+    <div class="result-top">
+      <span class="result-label"><div class="gem-gold"></div>Brief creativo listo</span>
+      <div class="result-actions">
+        <button class="action-btn copy-btn" id="copyBtn">Copiar</button>
+        <button class="action-btn pdf-btn" id="pdfBtn">⬇ PDF</button>
+      </div>
+    </div>
+    <div class="result-body">
+      <div class="loading-wrap" id="loadingWrap">
+        <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="loading-text">Analizando producto…</div>
+      </div>
+      <div class="streaming-status" id="streamingStatus">✦ Generando tu brief…</div>
+      <div class="brief-rendered" id="briefRendered" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Herramienta creada por <strong>Algris Márquez</strong> · UGC Consulting<br>
+    <span style="font-size:10px;opacity:0.6">© 2025 · Todos los derechos reservados</span>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let imageBase64=null,imageType='image/jpeg',cantidad=1,currentType='video',multiStyleMode=false,briefRaw='';
+
+// ── MARKDOWN → HTML PARSER ──
+function parseSection(title, body) {
+  const el = document.createElement('div');
+  el.className = 'section';
+
+  const icons = {
+    'ANÁLISIS': '🔍', 'CONCEPTO': '💡', 'BRIEF': '📋',
+    'GANCHOS': '🪝', 'HOOKS': '🪝', 'COPY': '💬',
+    'DIRECCIÓN': '🎨', 'AUDIO': '🔊', 'CREADOR': '📌', 'TIPS': '⚡'
+  };
+  const key = Object.keys(icons).find(k => title.toUpperCase().includes(k)) || '';
+  const icon = icons[key] || '✦';
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'section-title';
+  titleEl.innerHTML = `<span class="icon">${icon}</span>${title}`;
+  el.appendChild(titleEl);
+
+  const lines = body.trim().split('\n').filter(l => l.trim());
+  const isBriefPerPiece = title.toUpperCase().includes('BRIEF') && title.toUpperCase().includes('PIEZA');
+  const isHooks = title.toUpperCase().includes('GANCHO') || title.toUpperCase().includes('HOOK');
+
+  if (isBriefPerPiece) {
+    // Agrupar por pieza
+    let current = null;
+    lines.forEach(line => {
+      const pieceMatch = line.match(/^—?\s*[Pp]ieza\s*(\d+)/);
+      if (pieceMatch) {
+        current = document.createElement('div');
+        current.className = 'piece-block';
+        const lbl = document.createElement('div');
+        lbl.className = 'piece-label';
+        lbl.textContent = line.replace(/^—\s*/, '');
+        current.appendChild(lbl);
+        el.appendChild(current);
+      } else if (current) {
+        const p = document.createElement('p');
+        p.innerHTML = formatInline(line.replace(/^[·\-]\s*/,''));
+        current.appendChild(p);
+      } else {
+        const p = document.createElement('p');
+        p.innerHTML = formatInline(line);
+        el.appendChild(p);
+      }
+    });
+  } else if (isHooks) {
+    // Hooks numerados
+    let hookNum = 0;
+    const ul = document.createElement('div');
+    lines.forEach(line => {
+      const clean = line.replace(/^\d+[\.\-\)]\s*/,'').replace(/^[·\-—]\s*/,'').trim();
+      if (!clean) return;
+      hookNum++;
+      const item = document.createElement('div');
+      item.className = 'hook-item';
+      item.innerHTML = `<span class="hook-num">${hookNum}</span>${formatInline(clean)}`;
+      ul.appendChild(item);
+    });
+    el.appendChild(ul);
+  } else {
+    // General: bullets o párrafos
+    const hasBullets = lines.some(l => /^[·\-—•]/.test(l.trim()) || /^\d+\./.test(l.trim()));
+    if (hasBullets) {
+      const ul = document.createElement('ul');
+      lines.forEach(line => {
+        const clean = line.replace(/^[·\-—•]\s*/,'').replace(/^\d+[\.\)]\s*/,'').trim();
+        if (!clean) return;
+        const li = document.createElement('li');
+        li.innerHTML = formatInline(clean);
+        ul.appendChild(li);
+      });
+      el.appendChild(ul);
+    } else {
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        const p = document.createElement('p');
+        p.innerHTML = formatInline(line);
+        el.appendChild(p);
+      });
+    }
+  }
+  return el;
+}
+
+function formatInline(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>');
+}
+
+function renderBrief(raw) {
+  const container = document.getElementById('briefRendered');
+  container.innerHTML = '';
+
+  // Limpiar caracteres de formato innecesarios del raw
+  const cleaned = raw
+    .replace(/\*\*/g, '') // quitar ** sueltos que no forman par
+    .replace(/#{1,3}\s/g, '');
+
+  // Dividir por secciones ✦
+  const sectionRegex = /✦\s*([^\n]+)\n([\s\S]*?)(?=✦|$)/g;
+  let match;
+  let found = false;
+
+  while ((match = sectionRegex.exec(raw)) !== null) {
+    found = true;
+    const title = match[1].trim();
+    const body = match[2].trim();
+    container.appendChild(parseSection(title, body));
+  }
+
+  if (!found) {
+    // Fallback: mostrar como texto limpio
+    const pre = document.createElement('p');
+    pre.style.lineHeight = '1.8';
+    pre.style.fontSize = '14px';
+    pre.innerHTML = formatInline(raw.replace(/\*\*/g,'').replace(/\n/g,'<br>'));
+    container.appendChild(pre);
+  }
+}
+
+// ── FORMATO DINÁMICO ──
+function switchTipo(type) {
+  currentType = type;
+  ['subVideo','subFoto','subCarrusel','subStory'].forEach(id => document.getElementById(id).classList.remove('visible'));
+  const map = {video:'subVideo',foto:'subFoto',carrusel:'subCarrusel',story:'subStory'};
+  document.getElementById(map[type]).classList.add('visible');
+  updateEstiloMode();
+}
+document.querySelectorAll('#tipoPills .pill').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#tipoPills .pill').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); switchTipo(b.dataset.type);
+}));
+
+function makeSingle(id) {
+  const btns = document.querySelectorAll(`#${id} .pill`);
+  btns.forEach(b => b.addEventListener('click', () => { btns.forEach(x => x.classList.remove('active')); b.classList.add('active'); }));
+  return () => document.querySelector(`#${id} .pill.active`)?.dataset.val || '';
+}
+const getDur = makeSingle('durPills');
+const getFotoCant = makeSingle('fotoCantPills');
+const getSlides = makeSingle('slidePills');
+const getFin = makeSingle('finPills');
+const getPlat = makeSingle('platPills');
+
+function updateEstiloMode() {
+  const isVideo = currentType === 'video';
+  multiStyleMode = isVideo && cantidad > 1;
+  document.getElementById('multiStyleNote').classList.toggle('visible', multiStyleMode);
+  document.getElementById('estiloHint').textContent = multiStyleMode ? `Seleccioná hasta ${cantidad} estilos` : 'Seleccioná un estilo';
+  const btns = document.querySelectorAll('#estiloPills .pill');
+  btns.forEach(b => { b.classList.remove('active','multi-active'); b.onclick = null; });
+  if (!multiStyleMode) {
+    btns.forEach(b => b.addEventListener('click', () => { btns.forEach(x => x.classList.remove('active','multi-active')); b.classList.add('active'); }));
+    btns[0].classList.add('active');
+  } else {
+    btns.forEach(b => b.addEventListener('click', () => {
+      if (b.classList.contains('multi-active')) { b.classList.remove('multi-active'); }
+      else if (document.querySelectorAll('#estiloPills .pill.multi-active').length < cantidad) { b.classList.add('multi-active'); }
+    }));
+    btns[0].classList.add('multi-active');
+  }
+}
+updateEstiloMode();
+
+function getEstilos() {
+  if (multiStyleMode) return Array.from(document.querySelectorAll('#estiloPills .pill.multi-active')).map(b => b.dataset.val);
+  return [document.querySelector('#estiloPills .pill.active')?.dataset.val || ''];
+}
+
+document.getElementById('minusBtn').onclick = () => { if (cantidad > 1) { cantidad--; document.getElementById('cantVal').textContent = cantidad; updateEstiloMode(); } };
+document.getElementById('plusBtn').onclick = () => { if (cantidad < 10) { cantidad++; document.getElementById('cantVal').textContent = cantidad; updateEstiloMode(); } };
+
+function handleFile(file) {
+  if (!file) return;
+  imageType = file.type || 'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = e => {
+    imageBase64 = e.target.result.split(',')[1];
+    const img = document.getElementById('previewImg');
+    img.src = e.target.result; img.style.display = 'block';
+    document.getElementById('uploadPrompt').style.display = 'none';
+    document.getElementById('changeWrap').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+document.getElementById('fileInput').addEventListener('change', function() { handleFile(this.files[0]); });
+document.getElementById('changeImg').addEventListener('click', () => document.getElementById('fileInput').click());
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--purple)'; });
+zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+zone.addEventListener('drop', e => { e.preventDefault(); zone.style.borderColor = ''; handleFile(e.dataTransfer.files[0]); });
+
+function getSubParam() {
+  if (currentType === 'video') return getDur();
+  if (currentType === 'foto') return getFotoCant();
+  if (currentType === 'carrusel') return getSlides();
+  if (currentType === 'story') return '15 segundos (máximo estándar story)';
+  return '';
+}
+function getTipo() { return document.querySelector('#tipoPills .pill.active')?.dataset.val || ''; }
+
+// ── RESET ──
+document.getElementById('resetBtn').addEventListener('click', () => {
+  imageBase64 = null; cantidad = 1; briefRaw = '';
+  document.getElementById('previewImg').style.display = 'none';
+  document.getElementById('uploadPrompt').style.display = 'block';
+  document.getElementById('changeWrap').style.display = 'none';
+  document.getElementById('cantVal').textContent = '1';
+  ['cliente','producto','publico','extras'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('resultCard').classList.remove('visible');
+  document.getElementById('errorMsg').classList.remove('visible');
+  document.getElementById('briefRendered').innerHTML = '';
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active','multi-active'));
+  document.querySelector('#tipoPills .pill').classList.add('active');
+  document.querySelector('#durPills .pill').classList.add('active');
+  document.querySelector('#fotoCantPills .pill').classList.add('active');
+  document.querySelector('#slidePills .pill').classList.add('active');
+  document.querySelector('#finPills .pill').classList.add('active');
+  document.querySelector('#platPills .pill').classList.add('active');
+  switchTipo('video');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ── GENERATE WITH STREAMING ──
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  const err = document.getElementById('errorMsg');
+  err.classList.remove('visible');
+  if (!imageBase64) { err.textContent = 'Subí una imagen del producto para continuar.'; err.classList.add('visible'); return; }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generando…';
+
+  const rc = document.getElementById('resultCard');
+  const lw = document.getElementById('loadingWrap');
+  const ss = document.getElementById('streamingStatus');
+  const br = document.getElementById('briefRendered');
+
+  rc.classList.add('visible'); lw.style.display = 'flex';
+  ss.classList.remove('visible'); br.style.display = 'none'; br.innerHTML = ''; briefRaw = '';
+  setTimeout(() => rc.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+
+  const tipo = getTipo(), subParam = getSubParam(), fin = getFin(), plat = getPlat(), estilos = getEstilos();
+  const cliente = document.getElementById('cliente').value.trim();
+  const producto = document.getElementById('producto').value.trim();
+  const publico = document.getElementById('publico').value.trim();
+  const extras = document.getElementById('extras').value.trim();
+  const estiloStr = estilos.length > 1 ? estilos.map((e,i) => `Pieza ${i+1}: ${e}`).join(' / ') : estilos[0];
+  const piezas = Array.from({length:cantidad},(_,i) => `— Pieza ${i+1} [Estilo: ${estilos[i]||estilos[estilos.length-1]}]:`).join('\n');
+
+  const prompt = `Eres Algris Márquez, consultora experta en contenido UGC. Analizá la imagen del producto y creá un brief creativo completo, específico y listo para ejecutar.
+
+INSTRUCCIONES DE FORMATO IMPORTANTES:
+- Usá SOLO el símbolo ✦ para marcar cada sección principal (sin asteriscos, sin #, sin **)
+- No uses markdown: sin asteriscos para negritas, sin guiones bajos, sin #
+- Para bullets usá guión simple: -
+- Para piezas usá: — Pieza N [Estilo]:
+- Para hooks usá: 1. 2. 3. etc
+- Escribí en texto limpio y natural
+
+DATOS DEL PROYECTO:
+${cliente ? `- Cliente / Marca: ${cliente}` : ''}
+- Formato: ${tipo} — ${cantidad} pieza${cantidad>1?'s':''} — ${subParam}
+- Objetivo: ${fin}
+- Plataforma: ${plat}
+- Estilo(s): ${estiloStr}
+${producto ? `- Producto: ${producto}` : ''}
+${publico ? `- Público: ${publico}` : ''}
+${extras ? `- Notas: ${extras}` : ''}
+
+Estructura del brief:
+
+✦ ANÁLISIS DEL PRODUCTO
+[Categoría, propuesta visual, oportunidades creativas]
+
+✦ CONCEPTO CREATIVO
+[Una frase que define el eje narrativo]
+
+✦ BRIEF POR PIEZA
+${piezas}
+[Apertura, acción principal, encuadre, elementos visuales, cierre]
+
+✦ GANCHOS Y HOOKS
+[5 opciones de apertura para ${plat} — objetivo: ${fin}]
+
+✦ COPY Y TEXTO EN PANTALLA
+[Textos, overlays y subtítulos por pieza]
+
+✦ DIRECCIÓN DE ARTE
+- Paleta de colores y fondos
+- Props y escenografía
+- Iluminación ideal
+- Outfit del creador
+
+✦ AUDIO
+[Música, sonido o tendencia de audio en ${plat}]
+
+✦ BRIEF PARA EL CREADOR
+[5 instrucciones claras para ejecutar]
+
+✦ TIPS DE ALGRIS
+[2 consejos estratégicos para objetivo: ${fin}]`;
+
+  const mensajes = [
+    'Analizando la imagen del producto…',
+    'Identificando oportunidades creativas…',
+    'Escribiendo el concepto y los ganchos…',
+    'Preparando el brief por pieza…',
+    'Agregando los tips de Algris…',
+  ];
+  let msgIdx = 0;
+  const loadingText = document.querySelector('.loading-text');
+  loadingText.textContent = mensajes[0];
+  const msgInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % mensajes.length;
+    loadingText.textContent = mensajes[msgIdx];
+  }, 2800);
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, imageType, prompt })
+    });
+
+    clearInterval(msgInterval);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error de API');
+
+    lw.style.display = 'none';
+    br.style.display = 'block';
+    briefRaw = data.result;
+    renderBrief(briefRaw);
+
+  } catch (e) {
+    clearInterval(msgInterval);
+    lw.style.display = 'none';
+    br.style.display = 'block';
+    br.innerHTML = `<p style="color:#A32D2D">Error: ${e.message}. Verificá tu conexión e intentá de nuevo.</p>`;
+  }
+
+  btn.disabled = false; btn.innerHTML = '✦ Generar brief creativo';
+});
+
+// ── COPY ──
+document.getElementById('copyBtn').addEventListener('click', () => {
+  if (!briefRaw) return;
+  const clean = briefRaw.replace(/\*\*/g,'').replace(/\*/g,'');
+  navigator.clipboard.writeText(clean).then(() => {
+    const b = document.getElementById('copyBtn'); b.textContent = '✓ Copiado';
+    setTimeout(() => b.textContent = 'Copiar', 2000);
+  });
+});
+
+// ── PDF ──
+document.getElementById('pdfBtn').addEventListener('click', () => {
+  if (!briefRaw) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW=210, pageH=297, mL=20, mR=20, cW=170;
+
+  function addPageHeader(isFirst) {
+    doc.setFillColor(74,26,98); doc.rect(0,0,pageW,isFirst?45:10,'F');
+    doc.setFillColor(201,148,58); doc.rect(0,isFirst?45:10,pageW,1.5,'F');
+    if (isFirst) {
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(20);
+      doc.text('ALGRIS MÁRQUEZ', mL, 20);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(200,170,220);
+      doc.text('UGC CONSULTING', mL, 27);
+      doc.setTextColor(201,148,58); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text('BRIEF CREATIVO UGC', pageW-mR, 20, {align:'right'});
+      const cliente = document.getElementById('cliente').value.trim();
+      if (cliente) { doc.setTextColor(200,170,220); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(`Para: ${cliente}`, pageW-mR, 28, {align:'right'}); }
+      doc.setTextColor(200,170,220); doc.setFontSize(8);
+      doc.text(new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}), pageW-mR, 36, {align:'right'});
+    } else {
+      doc.setTextColor(200,170,220); doc.setFont('helvetica','normal'); doc.setFontSize(7);
+      doc.text('ALGRIS MÁRQUEZ · UGC Consulting', mL, 7);
+    }
+  }
+
+  function addPageFooter() {
+    doc.setFillColor(247,245,240); doc.rect(0,pageH-12,pageW,12,'F');
+    doc.setFillColor(201,148,58); doc.rect(0,pageH-12,pageW,0.8,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(107,107,128);
+    doc.text('Generado por Algris Márquez · UGC Consulting · © 2025', mL, pageH-5);
+    doc.setTextColor(107,45,139);
+    doc.text('algrismarquez.com', pageW-mR, pageH-5, {align:'right'});
+  }
+
+  addPageHeader(true);
+  let y = 55;
+  let isFirstPage = true;
+
+  // Parse secciones del raw text
+  const clean = briefRaw.replace(/\*\*/g,'').replace(/\*/g,'');
+  const sectionRegex = /✦\s*([^\n]+)\n([\s\S]*?)(?=✦|$)/g;
+  let match;
+  const sections = [];
+  while ((match = sectionRegex.exec(clean)) !== null) {
+    sections.push({ title: match[1].trim(), body: match[2].trim() });
+  }
+
+  for (const { title, body } of sections) {
+    // Chequear espacio
+    if (y > pageH - 50) {
+      addPageFooter();
+      doc.addPage();
+      isFirstPage = false;
+      addPageHeader(false);
+      y = 18;
+    }
+
+    // Título de sección
+    y += 3;
+    doc.setFillColor(243,234,247); doc.roundedRect(mL-3, y-5, cW+6, 9, 2, 2, 'F');
+    doc.setFillColor(107,45,139); doc.roundedRect(mL-3, y-5, 3, 9, 1, 1, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(74,26,98);
+    doc.text(title, mL+4, y);
+    y += 10;
+    doc.setTextColor(26,26,46);
+
+    // Cuerpo
+    const lines = body.split('\n').filter(l => l.trim());
+    for (const line of lines) {
+      if (y > pageH - 25) {
+        addPageFooter(); doc.addPage(); isFirstPage = false;
+        addPageHeader(false); y = 18; doc.setTextColor(26,26,46);
+      }
+      const isPiece = /^—\s*[Pp]ieza/.test(line);
+      const isBullet = /^[-·•]/.test(line.trim());
+      const isNum = /^\d+[\.\)]/.test(line.trim());
+
+      if (isPiece) {
+        y += 2;
+        doc.setFillColor(247,245,240); doc.roundedRect(mL, y-4, cW, 7, 1, 1, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(107,45,139);
+        doc.text(line.replace(/^—\s*/,'').toUpperCase(), mL+3, y);
+        y += 7; doc.setTextColor(26,26,46);
+      } else if (isBullet || isNum) {
+        doc.setFont('helvetica','normal'); doc.setFontSize(9);
+        doc.setTextColor(107,45,139); doc.text('•', mL+2, y); doc.setTextColor(26,26,46);
+        const txt = line.replace(/^[-·•]\s*/,'').replace(/^\d+[\.\)]\s*/,'');
+        const wrapped = doc.splitTextToSize(txt, cW-10);
+        doc.text(wrapped, mL+8, y);
+        y += wrapped.length * 5 + 1;
+      } else {
+        doc.setFont('helvetica','normal'); doc.setFontSize(9);
+        const wrapped = doc.splitTextToSize(line, cW);
+        doc.text(wrapped, mL, y);
+        y += wrapped.length * 5 + 1;
+      }
+    }
+    y += 6;
+  }
+
+  addPageFooter();
+  const cliente = document.getElementById('cliente').value.trim();
+  const fn = cliente ? `brief-ugc-${cliente.toLowerCase().replace(/\s+/g,'-')}.pdf` : 'brief-ugc-algrismarquez.pdf';
+  doc.save(fn);
+});
+</script>
+</body>
+</html>
