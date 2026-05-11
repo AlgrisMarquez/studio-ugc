@@ -130,6 +130,11 @@ input::placeholder{color:var(--muted)}
   border-radius:8px;padding:9px 13px;margin-bottom:6px;
   font-size:13.5px;position:relative;padding-left:32px;
 }
+.brief-rendered .arte-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.brief-rendered .arte-card{background:var(--cream);border:0.5px solid var(--border);border-radius:10px;padding:12px 14px}
+.brief-rendered .arte-card-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--purple);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.brief-rendered .arte-card-body{font-size:13px;color:var(--text);line-height:1.6}
+@media(max-width:520px){.brief-rendered .arte-grid{grid-template-columns:1fr}}
 .brief-rendered .hook-num{
   position:absolute;left:10px;top:50%;transform:translateY(-50%);
   width:16px;height:16px;background:var(--purple);color:#fff;
@@ -364,6 +369,7 @@ function parseSection(title, body) {
   const lines = body.trim().split('\n').filter(l => l.trim());
   const isBriefPerPiece = title.toUpperCase().includes('BRIEF') && title.toUpperCase().includes('PIEZA');
   const isHooks = title.toUpperCase().includes('GANCHO') || title.toUpperCase().includes('HOOK');
+  const isArte = title.toUpperCase().includes('DIRECCI') || title.toUpperCase().includes('ARTE');
 
   if (isBriefPerPiece) {
     // Agrupar por pieza
@@ -402,6 +408,56 @@ function parseSection(title, body) {
       ul.appendChild(item);
     });
     el.appendChild(ul);
+  } else if (isArte) {
+    // Arte subsecciones como tarjetas
+    const arteMap = {
+      'paleta': { icon: '🎨', label: 'Paleta de colores' },
+      'color': { icon: '🎨', label: 'Paleta de colores' },
+      'prop': { icon: '🪴', label: 'Props y escenografía' },
+      'escenograf': { icon: '🪴', label: 'Props y escenografía' },
+      'iluminaci': { icon: '💡', label: 'Iluminación' },
+      'outfit': { icon: '👗', label: 'Outfit del creador' },
+      'presentaci': { icon: '👗', label: 'Presentación' },
+    };
+    const grid = document.createElement('div');
+    grid.className = 'arte-grid';
+    const cards = {};
+    let currentCard = null;
+
+    lines.forEach(line => {
+      const lower = line.toLowerCase().replace(/^[-·]\s*/,'');
+      const matchKey = Object.keys(arteMap).find(k => lower.startsWith(k));
+      if (matchKey) {
+        const meta = arteMap[matchKey];
+        if (!cards[matchKey]) {
+          const card = document.createElement('div');
+          card.className = 'arte-card';
+          const lbl = document.createElement('div');
+          lbl.className = 'arte-card-label';
+          lbl.innerHTML = `${meta.icon} ${meta.label}`;
+          card.appendChild(lbl);
+          const body = document.createElement('div');
+          body.className = 'arte-card-body';
+          // Extract value after colon if present
+          const val = line.replace(/^[-·]\s*/,'').replace(/^[^:]+:\s*/,'').trim();
+          body.innerHTML = formatInline(val || lower);
+          card.appendChild(body);
+          cards[matchKey] = card;
+          grid.appendChild(card);
+          currentCard = body;
+        }
+      } else if (currentCard && line.trim()) {
+        currentCard.innerHTML += '<br>' + formatInline(line.replace(/^[-·]\s*/,''));
+      } else if (!Object.keys(cards).length) {
+        // Fallback si no matchea nada todavía
+        const p = document.createElement('p');
+        p.innerHTML = formatInline(line.replace(/^[-·]\s*/,''));
+        el.appendChild(p);
+      }
+    });
+
+    if (grid.children.length > 0) el.appendChild(grid);
+
   } else {
     // General: bullets o párrafos
     const hasBullets = lines.some(l => /^[·\-—•]/.test(l.trim()) || /^\d+\./.test(l.trim()));
