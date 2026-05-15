@@ -1246,7 +1246,7 @@ document.getElementById('feedbackSubmit').addEventListener('click', async () => 
     body: JSON.stringify({ userId: currentUser.id, action: 'feedback', rating: selectedStars, comment })
   });
   document.getElementById('feedbackOverlay').classList.remove('visible');
-  // Continuar con la generación pendiente
+  // Continuar con la generación pendient
   if (pendingPrompt) { pendingFeedback = false; executeBrief(pendingPrompt); pendingPrompt = null; }
 });
 
