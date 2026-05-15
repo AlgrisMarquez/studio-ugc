@@ -1,23 +1,13 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "api/generate.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    }
+    { "src": "api/generate.js", "use": "@vercel/node" },
+    { "src": "api/auth.js", "use": "@vercel/node" },
+    { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
-    {
-      "src": "/api/generate",
-      "dest": "/api/generate.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/api/generate", "dest": "/api/generate.js" },
+    { "src": "/api/auth", "dest": "/api/auth.js" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

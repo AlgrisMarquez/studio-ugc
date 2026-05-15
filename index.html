@@ -794,6 +794,55 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 // ── GENERATE WITH STREAMING ──
+async function executeBrief(promptData) {
+  const err = document.getElementById('errorMsg');
+  err.classList.remove('visible');
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generando…';
+
+  const rc = document.getElementById('resultCard');
+  const lw = document.getElementById('loadingWrap');
+  const br = document.getElementById('briefRendered');
+  rc.classList.add('visible'); lw.style.display = 'flex';
+  br.style.display = 'none'; br.innerHTML = '';
+  setTimeout(() => rc.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+
+  const mensajes = [
+    'Analizando la imagen del producto…',
+    'Identificando oportunidades creativas…',
+    'Escribiendo el concepto y los ganchos…',
+    'Preparando el brief por pieza…',
+    'Agregando los tips de Algris…',
+  ];
+  let msgIdx = 0;
+  const loadingText = document.querySelector('.loading-text');
+  loadingText.textContent = mensajes[0];
+  const msgInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % mensajes.length;
+    loadingText.textContent = mensajes[msgIdx];
+  }, 2800);
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...promptData, userId: currentUser?.id })
+    });
+    clearInterval(msgInterval);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Error de API');
+    lw.style.display = 'none'; br.style.display = 'block';
+    briefRaw = data.result; renderBrief(briefRaw);
+    await refreshStatus();
+  } catch (e) {
+    clearInterval(msgInterval);
+    lw.style.display = 'none'; br.style.display = 'block';
+    br.innerHTML = `<p style="color:#A32D2D">Error: ${e.message}</p>`;
+  }
+  btn.disabled = false; btn.innerHTML = '✦ Generar brief creativo';
+}
+
 document.getElementById('generateBtn').addEventListener('click', async () => {
   const err = document.getElementById('errorMsg');
   err.classList.remove('visible');
@@ -912,45 +961,33 @@ ${piezas}
 
   const prompt = isVisual ? promptFoto : promptVideo;
 
-  const mensajes = [
-    'Analizando la imagen del producto…',
-    'Identificando oportunidades creativas…',
-    'Escribiendo el concepto y los ganchos…',
-    'Preparando el brief por pieza…',
-    'Agregando los tips de Algris…',
-  ];
-  let msgIdx = 0;
-  const loadingText = document.querySelector('.loading-text');
-  loadingText.textContent = mensajes[0];
-  const msgInterval = setInterval(() => {
-    msgIdx = (msgIdx + 1) % mensajes.length;
-    loadingText.textContent = mensajes[msgIdx];
-  }, 2800);
-
-  try {
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64, imageType, prompt })
-    });
-
-    clearInterval(msgInterval);
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || 'Error de API');
-
-    lw.style.display = 'none';
-    br.style.display = 'block';
-    briefRaw = data.result;
-    renderBrief(briefRaw);
-
-  } catch (e) {
-    clearInterval(msgInterval);
-    lw.style.display = 'none';
-    br.style.display = 'block';
-    br.innerHTML = `<p style="color:#A32D2D">Error: ${e.message}. Verificá tu conexión e intentá de nuevo.</p>`;
+  // Check auth
+  if (!currentUser) {
+    document.getElementById('authOverlay').style.display = 'flex';
+    return;
   }
 
-  btn.disabled = false; btn.innerHTML = '✦ Generar brief creativo';
+  // Check usage status
+  await refreshStatus();
+  if (userStatus?.blocked) {
+    document.getElementById('blockedMsg').textContent = userStatus.message;
+    document.getElementById('blockedOverlay').classList.add('visible');
+    btn.disabled = false; btn.innerHTML = '✦ Generar brief creativo';
+    return;
+  }
+
+  const promptPayload = { imageBase64, imageType, prompt };
+
+  // Show feedback if needed (3rd brief of month 2)
+  if (userStatus?.showFeedback && !pendingFeedback) {
+    pendingFeedback = true;
+    pendingPrompt = promptPayload;
+    document.getElementById('feedbackOverlay').classList.add('visible');
+    btn.disabled = false; btn.innerHTML = '✦ Generar brief creativo';
+    return;
+  }
+
+  executeBrief(promptPayload);
 });
 
 // ── COPY ──
@@ -1070,6 +1107,149 @@ document.getElementById('pdfBtn').addEventListener('click', () => {
   const fn = cliente ? `brief-ugc-${cliente.toLowerCase().replace(/\s+/g,'-')}.pdf` : 'brief-ugc-algrismarquez.pdf';
   doc.save(fn);
 });
+
+// ── SUPABASE AUTH & USAGE ──
+const SUPABASE_URL = 'https://jsfrawzabaeempasajbd.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzZnJhd3phYmFlZW1wYXNhamJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDY5NDgsImV4cCI6MjA5NDQyMjk0OH0.NOqElNFu2rCtnpRd7kr05rbNlBzFkT1FsXK4L5XsgeI';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let currentUser = null;
+let userStatus = null;
+let pendingFeedback = false;
+let pendingPrompt = null;
+let selectedStars = 0;
+
+// Init
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    await setUser(session.user);
+  } else {
+    document.getElementById('authOverlay').style.display = 'flex';
+  }
+})();
+
+async function setUser(user) {
+  currentUser = user;
+  document.getElementById('authOverlay').style.display = 'none';
+  document.getElementById('userBar').classList.add('visible');
+  document.getElementById('userEmail').textContent = user.email.split('@')[0];
+  await refreshStatus();
+}
+
+async function refreshStatus() {
+  if (!currentUser) return;
+  const res = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: currentUser.id, action: 'status' })
+  });
+  userStatus = await res.json();
+
+  // Update plan badge
+  const badge = document.getElementById('userPlanBadge');
+  if (userStatus.plan === 'pro') { badge.textContent = '✦ Pro'; badge.classList.add('pro'); }
+  else badge.textContent = '✦ Gratis';
+
+  // Update usage bar
+  if (userStatus.plan !== 'pro') {
+    const bar = document.getElementById('usageBar');
+    bar.classList.add('visible');
+    const limit = userStatus.limit || 5;
+    const used = userStatus.totalMonth || 0;
+    const pct = Math.min((used / limit) * 100, 100);
+    document.getElementById('usageCount').textContent = `${used} / ${limit}`;
+    const fill = document.getElementById('usageFill');
+    fill.style.width = pct + '%';
+    fill.className = 'usage-fill' + (pct >= 100 ? ' full' : pct >= 60 ? ' warning' : '');
+  }
+
+  // Show blocked modal if needed
+  if (userStatus.blocked) {
+    document.getElementById('blockedMsg').textContent = userStatus.message;
+    document.getElementById('blockedOverlay').classList.add('visible');
+    if (!userStatus.showUpgrade) document.getElementById('upgradeBtn').style.display = 'none';
+  }
+}
+
+// AUTH FORM
+let isLogin = false;
+document.getElementById('authToggle').addEventListener('click', () => {
+  isLogin = !isLogin;
+  document.getElementById('authTitle').innerHTML = isLogin ? 'Bienvenida de vuelta' : 'Bienvenida a tu <em>Estudio</em>';
+  document.getElementById('authSubtitle').textContent = isLogin ? 'Ingresá para continuar generando briefs.' : 'Creá tu cuenta gratis y empezá a generar briefs creativos al instante.';
+  document.getElementById('authSubmit').textContent = isLogin ? 'Iniciar sesión' : 'Crear cuenta gratis';
+  document.getElementById('authToggle').textContent = isLogin ? 'Crear cuenta gratis' : 'Iniciar sesión';
+  document.getElementById('authError').classList.remove('visible');
+});
+
+document.getElementById('authSubmit').addEventListener('click', async () => {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  const btn = document.getElementById('authSubmit');
+  errEl.classList.remove('visible');
+  if (!email || !password) { errEl.textContent = 'Completá todos los campos.'; errEl.classList.add('visible'); return; }
+  btn.disabled = true; btn.textContent = 'Procesando…';
+
+  try {
+    if (isLogin) {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      await setUser(data.user);
+    } else {
+      const { data, error } = await sb.auth.signUp({ email, password });
+      if (error) throw error;
+      if (data.user) await setUser(data.user);
+      else { errEl.textContent = 'Revisá tu email para confirmar tu cuenta.'; errEl.classList.add('visible'); }
+    }
+  } catch (e) {
+    const msgs = { 'Invalid login credentials': 'Email o contraseña incorrectos.', 'User already registered': 'Este email ya está registrado. Iniciá sesión.' };
+    errEl.textContent = msgs[e.message] || e.message;
+    errEl.classList.add('visible');
+  }
+  btn.disabled = false;
+  btn.textContent = isLogin ? 'Iniciar sesión' : 'Crear cuenta gratis';
+});
+
+// LOGOUT
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  currentUser = null; userStatus = null;
+  document.getElementById('userBar').classList.remove('visible');
+  document.getElementById('usageBar').classList.remove('visible');
+  document.getElementById('authOverlay').style.display = 'flex';
+});
+
+// BLOCKED MODAL
+document.getElementById('upgradeBtn').addEventListener('click', () => {
+  alert('Próximamente: Stripe para activar Plan Pro. Por ahora contactá a Algris Márquez.');
+});
+document.getElementById('blockedDismiss').addEventListener('click', () => {
+  document.getElementById('blockedOverlay').classList.remove('visible');
+});
+
+// FEEDBACK STARS
+document.querySelectorAll('.star').forEach(s => {
+  s.addEventListener('click', () => {
+    selectedStars = parseInt(s.dataset.val);
+    document.querySelectorAll('.star').forEach((st, i) => st.classList.toggle('active', i < selectedStars));
+  });
+});
+
+document.getElementById('feedbackSubmit').addEventListener('click', async () => {
+  if (!selectedStars) { alert('Seleccioná una puntuación'); return; }
+  const comment = document.getElementById('feedbackComment').value.trim();
+  await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: currentUser.id, action: 'feedback', rating: selectedStars, comment })
+  });
+  document.getElementById('feedbackOverlay').classList.remove('visible');
+  // Continuar con la generación pendiente
+  if (pendingPrompt) { pendingFeedback = false; executeBrief(pendingPrompt); pendingPrompt = null; }
+});
+
 </script>
 </body>
 </html>
