@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -18,7 +18,7 @@ function getMonthsDiff(dateStr) {
   return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { imageBase64, imageType, prompt, userId, action } = req.body;
@@ -49,65 +49,36 @@ export default async function handler(req, res) {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId);
 
-    // Determinar estado según flujo de conversión
-    let status = 'active';
-    let limit = 5;
-    let message = '';
-    let showFeedback = false;
-    let showUpgrade = false;
-    let blocked = false;
+    let status = 'active', limit = 5, message = '', showFeedback = false, showUpgrade = false, blocked = false;
 
     if (profile.plan === 'pro') {
-      status = 'pro';
-      limit = 999;
+      status = 'pro'; limit = 999;
     } else if (monthsDiff >= 5) {
-      // Mes 5+: acceso cerrado
-      status = 'closed';
-      blocked = true;
+      status = 'closed'; blocked = true; showUpgrade = true;
       message = 'Tu período gratuito ha finalizado. Activá tu plan Pro para seguir generando briefs.';
-      showUpgrade = true;
     } else if (monthsDiff >= 3) {
-      // Mes 3-4 sin pago: 1 brief por mes
       limit = 1;
-      if (totalMonth >= 1) {
-        status = 'restricted';
-        blocked = true;
+      if ((totalMonth || 0) >= 1) {
+        status = 'restricted'; blocked = true; showUpgrade = true;
         const next = new Date();
-        next.setMonth(next.getMonth() + 1);
-        next.setDate(1);
+        next.setMonth(next.getMonth() + 1); next.setDate(1);
         message = `Ya usaste tu brief gratuito de este mes. Próximo disponible el 1 de ${next.toLocaleDateString('es-ES', { month: 'long' })}. O activá Pro ahora.`;
-        showUpgrade = true;
       }
     } else if (monthsDiff >= 2) {
-      // Mes 3 inicio: exigir pago
-      status = 'upgrade_required';
-      blocked = true;
+      status = 'upgrade_required'; blocked = true; showUpgrade = true;
       message = 'Ya usaste UGC Studio por 2 meses. Para seguir sin límites, activá tu plan Pro.';
-      showUpgrade = true;
     } else {
-      // Mes 1-2: libre con límite de 5
-      if (totalMonth >= 5) {
-        blocked = true;
+      if ((totalMonth || 0) >= 5) {
+        blocked = true; showUpgrade = true;
         message = 'Llegaste al límite de 5 briefs este mes. Volvé el próximo mes o activá Pro.';
-        showUpgrade = true;
       }
-      // Feedback en el 3er brief del mes 2
-      if (monthsDiff >= 1 && totalMonth === 2) {
-        showFeedback = true;
-      }
+      if (monthsDiff >= 1 && (totalMonth || 0) === 2) showFeedback = true;
     }
 
     return res.status(200).json({
-      status,
-      plan: profile.plan,
-      monthsDiff,
-      totalMonth: totalMonth || 0,
-      totalAll: totalAll || 0,
-      limit,
-      blocked,
-      message,
-      showFeedback,
-      showUpgrade
+      status, plan: profile.plan, monthsDiff,
+      totalMonth: totalMonth || 0, totalAll: totalAll || 0,
+      limit, blocked, message, showFeedback, showUpgrade
     });
   }
 
@@ -122,9 +93,7 @@ export default async function handler(req, res) {
   if (!imageBase64 || !prompt) return res.status(400).json({ error: 'Faltan datos' });
   if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'API key no configurada' });
 
-  // Registrar uso
-  const monthYear = getMonthYear();
-  await supabase.from('brief_usage').insert({ user_id: userId, month_year: monthYear });
+  await supabase.from('brief_usage').insert({ user_id: userId, month_year: getMonthYear() });
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
